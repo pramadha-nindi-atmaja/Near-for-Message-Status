@@ -10,40 +10,48 @@ const BOATLOAD_OF_GAS = Big(3)
 
 const App = ({ contract, currentUser, nearConfig, wallet }) => {
   const [status, setStatus] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  useEffect(async () => {
-    if (currentUser) {
+  const fetchStatus = async () => {
+    if (!currentUser) return;
+    try {
       const status = await contract.get_status({
         account_id: currentUser.accountId,
       });
-
       setStatus(status);
+      setError(null);
+    } catch (err) {
+      console.error('Failed to fetch status:', err);
+      setError('Failed to load status. Please try again.');
     }
-  });
+  };
 
-  const onSubmit = async (event) => {
-    event.preventDefault();
+  useEffect(() => {
+    fetchStatus();
+  }, [currentUser]);
 
-    const { fieldset, message } = event.target.elements;
-    fieldset.disabled = true;
+  const onSubmit = async ({ message }) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      await contract.set_status(
+        {
+          message,
+          account_id: currentUser.accountId,
+        },
+        BOATLOAD_OF_GAS
+      );
+      
+      await fetchStatus();
+    } catch (err) {
+      console.error('Failed to update status:', err);
+      setError('Failed to update status. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
 
-    await contract.set_status(
-      {
-        message: message.value,
-        account_id: currentUser.accountId,
-      },
-      BOATLOAD_OF_GAS
-    );
-
-    const status = await contract.get_status({
-      account_id: currentUser.accountId,
-    });
-
-    setStatus(status);
-
-    message.value = "";
-    fieldset.disabled = false;
-    message.focus();
   };
 
   const signIn = () => {
@@ -75,9 +83,24 @@ const App = ({ contract, currentUser, nearConfig, wallet }) => {
         )}
       </header>
 
-      {currentUser && <Form onSubmit={onSubmit} currentUser={currentUser} />}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
 
-      {status ? (
+      {currentUser && (
+        <Form 
+          onSubmit={onSubmit} 
+          currentUser={currentUser} 
+          maxLength={1000}
+          disabled={isLoading}
+        />
+      )}
+
+      {isLoading ? (
+        <p>Updating status...</p>
+      ) : status ? (
         <>
           <p>Your current status:</p>
           <p>

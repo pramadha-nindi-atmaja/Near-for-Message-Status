@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 
-export default function Form({ onSubmit, currentUser, maxLength }) {
+export default function Form({ onSubmit, currentUser, maxLength, isPublic, onPrivacyChange, expiresInHours, onExpirationChange }) {
   const [message, setMessage] = useState('');
 
   const handleChange = (e) => {
@@ -30,20 +30,43 @@ export default function Form({ onSubmit, currentUser, maxLength }) {
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="message">Message:</label>
-          <input
-            type="text"
+          <textarea
             id="message"
             value={message}
             onChange={handleChange}
             placeholder="What's your status?"
             aria-describedby="message-help"
+            rows="4"
+            cols="50"
           />
           <div id="message-help" aria-live="polite">
             <small>{remaining} characters remaining</small>
           </div>
         </div>
+        <div className="options-group">
+          <div className="option">
+            <label>
+              <input
+                type="checkbox"
+                checked={isPublic}
+                onChange={(e) => onPrivacyChange && onPrivacyChange(e.target.checked)}
+              />
+              Make status public
+            </label>
+          </div>
+          <div className="option">
+            <label htmlFor="expiration">Auto-expire in hours (0 = never):</label>
+            <input
+              type="number"
+              id="expiration"
+              min="0"
+              value={expiresInHours || 0}
+              onChange={onExpirationChange}
+            />
+          </div>
+        </div>
         <button type="submit" disabled={message.trim().length === 0}>
-          Update
+          Update Status
         </button>
       </form>
     </div>
@@ -55,10 +78,18 @@ Form.propTypes = {
   currentUser: PropTypes.shape({
     accountId: PropTypes.string.isRequired
   }),
-  maxLength: PropTypes.number
+  maxLength: PropTypes.number,
+  isPublic: PropTypes.bool,
+  onPrivacyChange: PropTypes.func,
+  expiresInHours: PropTypes.number,
+  onExpirationChange: PropTypes.func,
 };
 
 Form.defaultProps = {
   currentUser: { accountId: 'guest' },
-  maxLength: 280
+  maxLength: 1000,
+  isPublic: true,
+  onPrivacyChange: null,
+  expiresInHours: 0,
+  onExpirationChange: null,
 };
